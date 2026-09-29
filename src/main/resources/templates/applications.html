@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GrantTrack – Applications</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <a class="brand" th:href="@{/}">&#128218; GrantTrack</a>
+    <a th:href="@{/}">Dashboard</a>
+    <a th:href="@{/applications}">Applications</a>
+    <a th:href="@{/faculty}">Faculty</a>
+    <a th:href="@{/applications/new}" class="btn-light">+ New Application</a>
+</nav>
+
+<div class="container">
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}"   class="alert alert-error"   th:text="${error}"></div>
+
+    <div class="page-header">
+        <h2>Applications</h2>
+        <a th:href="@{/applications/new}" class="btn btn-primary">+ New Application</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Title</th><th>Faculty</th>
+                            <th>Requested (&#8377;)</th><th>Approved (&#8377;)</th>
+                            <th>Deadline</th><th>Status</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(apps)}">
+                            <td colspan="8" style="text-align:center;color:#888;padding:24px">No applications found.</td>
+                        </tr>
+                        <tr th:each="app : ${apps}">
+                            <td th:text="${app.id}"></td>
+                            <td th:text="${app.title}"></td>
+                            <td th:text="${app.faculty != null ? app.faculty.name : '–'}"></td>
+                            <td th:text="${#numbers.formatDecimal(app.requestedAmount, 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${#numbers.formatDecimal(app.approvedAmount, 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${app.deadline}"></td>
+                            <td>
+                                <span th:class="'badge badge-' + ${#strings.toLowerCase(app.status.name())}"
+                                      th:text="${app.status}"></span>
+                            </td>
+                            <td style="white-space:nowrap">
+                                <a th:href="@{/applications/{id}(id=${app.id})}" class="btn btn-primary btn-sm">View</a>
+                                <form th:action="@{/applications/{id}/delete(id=${app.id})}" method="post"
+                                      style="display:inline"
+                                      onsubmit="return confirm('Delete this application?')">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="'GrantTrack – ' + ${app.title}">GrantTrack</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <a class="brand" th:href="@{/}">&#128218; GrantTrack</a>
+    <a th:href="@{/}">Dashboard</a>
+    <a th:href="@{/applications}">Applications</a>
+    <a th:href="@{/faculty}">Faculty</a>
+    <a th:href="@{/applications/new}" class="btn-light">+ New Application</a>
+</nav>
+
+<div class="container">
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}"   class="alert alert-error"   th:text="${error}"></div>
+
+    <div class="page-header">
+        <h2 th:text="${app.title}">Application</h2>
+        <a th:href="@{/applications}" class="btn btn-outline">&#8592; Back</a>
+    </div>
+
+    <div class="detail-grid">
+
+        <!-- ── Left column ── -->
+        <div>
+
+            <!-- Details card -->
+            <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>Application Details</span>
+                    <span th:class="'badge badge-' + ${#strings.toLowerCase(app.status.name())}"
+                          th:text="${app.status}"></span>
+                </div>
+                <div class="card-body">
+                    <table class="detail-table" style="width:100%;border-collapse:collapse">
+                        <tr><td>ID</td>               <td th:text="${app.id}"></td></tr>
+                        <tr><td>Faculty</td>           <td th:text="${app.faculty != null ? app.faculty.name + ' (' + app.faculty.department + ')' : '–'}"></td></tr>
+                        <tr><td>Requested Amount</td>  <td th:text="'₹' + ${#numbers.formatDecimal(app.requestedAmount, 1, 'COMMA', 2, 'POINT')}"></td></tr>
+                        <tr><td>Approved Amount</td>   <td th:text="'₹' + ${#numbers.formatDecimal(app.approvedAmount, 1, 'COMMA', 2, 'POINT')}"></td></tr>
+                        <tr><td>Deadline</td>          <td th:text="${app.deadline}"></td></tr>
+                        <tr><td>Abstract</td>          <td th:text="${app.abstractText}"></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Stage history -->
+            <div class="card">
+                <div class="card-header">Stage History</div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(stages)}" style="color:#888;font-size:.9rem">No stages recorded yet.</div>
+                    <div class="timeline">
+                        <th:block th:each="s,iter : ${stages}">
+                            <div class="tl-item">
+                                <div th:class="'tl-dot tl-dot-' + ${#strings.toLowerCase(s.stageName.name())}"></div>
+                                <div class="tl-content">
+                                    <div class="tl-name" th:text="${s.stageName}"></div>
+                                    <div class="tl-date" th:text="${s.stageDate}"></div>
+                                    <div class="tl-remark" th:if="${s.remarks}" th:text="${s.remarks}"></div>
+                                </div>
+                            </div>
+                            <div class="tl-line" th:if="${!iter.last}"></div>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenditure section (APPROVED only) -->
+            <div th:if="${app.status.name() == 'APPROVED'}">
+
+                <!-- Budget summary -->
+                <div class="card">
+                    <div class="card-header">Budget Summary</div>
+                    <div class="card-body">
+                        <div class="budget-row">
+                            <div>
+                                <div class="budget-val c-green"
+                                     th:text="'₹' + ${#numbers.formatDecimal(budget['approvedAmount'], 1, 'COMMA', 2, 'POINT')}"></div>
+                                <div class="budget-lbl">Approved</div>
+                            </div>
+                            <div>
+                                <div class="budget-val c-red"
+                                     th:text="'₹' + ${#numbers.formatDecimal(budget['totalExpenditure'], 1, 'COMMA', 2, 'POINT')}"></div>
+                                <div class="budget-lbl">Spent</div>
+                            </div>
+                            <div>
+                                <div class="budget-val c-blue"
+                                     th:text="'₹' + ${#numbers.formatDecimal(budget['remainingAmount'], 1, 'COMMA', 2, 'POINT')}"></div>
+                                <div class="budget-lbl">Remaining</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill"
+                                 th:style="'width:' + ${budget['approvedAmount'].compareTo(T(java.math.BigDecimal).ZERO) > 0 ? budget['totalExpenditure'].divide(budget['approvedAmount'], 4, T(java.math.RoundingMode).HALF_UP).multiply(T(java.math.BigDecimal).valueOf(100)).min(T(java.math.BigDecimal).valueOf(100)) : 0} + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add expenditure form -->
+                <div class="card">
+                    <div class="card-header">Add Expenditure</div>
+                    <div class="card-body">
+                        <form th:action="@{/applications/{id}/expenditures(id=${app.id})}" method="post">
+                            <div class="form-group">
+                                <label>Description <span class="required">*</span></label>
+                                <input type="text" name="description" required placeholder="e.g. Research equipment"/>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Amount (&#8377;) <span class="required">*</span></label>
+                                    <input type="number" name="amount" required min="0.01" step="0.01"/>
+                                </div>
+                                <div class="form-group">
+                                    <label>Date <span class="required">*</span></label>
+                                    <input type="date" name="expenditureDate" required/>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Add Expenditure</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Expenditure history -->
+                <div class="card">
+                    <div class="card-header">Expenditure History</div>
+                    <div class="card-body" style="padding:0">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr><th>Description</th><th>Amount (&#8377;)</th><th>Date</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${#lists.isEmpty(expenditures)}">
+                                        <td colspan="3" style="text-align:center;color:#888;padding:16px">No expenditures yet.</td>
+                                    </tr>
+                                    <tr th:each="ex : ${expenditures}">
+                                        <td th:text="${ex.description}"></td>
+                                        <td th:text="${#numbers.formatDecimal(ex.amount, 1, 'COMMA', 2, 'POINT')}"></td>
+                                        <td th:text="${ex.expenditureDate}"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Not approved notice -->
+            <div th:if="${app.status.name() != 'APPROVED'}" class="alert alert-info">
+                Expenditure tracking is available only for <strong>APPROVED</strong> applications.
+            </div>
+
+        </div>
+
+        <!-- ── Right column ── -->
+        <div>
+
+            <!-- Update status -->
+            <div class="card">
+                <div class="card-header">Update Status</div>
+                <div class="card-body">
+                    <form th:action="@{/applications/{id}/status(id=${app.id})}" method="post">
+                        <div class="form-group">
+                            <label>New Status</label>
+                            <select name="status" id="statusSelect" required>
+                                <option th:each="s : ${statuses}"
+                                        th:value="${s}"
+                                        th:text="${s}"
+                                        th:selected="${s == app.status}"></option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="approvedAmountGroup" style="display:none">
+                            <label>Approved Amount (&#8377;) <span class="required">*</span></label>
+                            <input type="number" name="approvedAmount" min="0.01" step="0.01"
+                                   th:value="${app.approvedAmount}"
+                                   placeholder="Must not exceed requested amount"/>
+                        </div>
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <input type="text" name="remarks" placeholder="Optional remarks"/>
+                        </div>
+                        <button type="submit" class="btn btn-warning" style="width:100%">Update Status</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Delete -->
+            <div class="card">
+                <div class="card-header">Danger Zone</div>
+                <div class="card-body">
+                    <form th:action="@{/applications/{id}/delete(id=${app.id})}" method="post"
+                          onsubmit="return confirm('Delete this application? This cannot be undone.')">
+                        <button type="submit" class="btn btn-danger" style="width:100%">Delete Application</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script th:src="@{/js/script.js}"></script>
+</body>
+</html>
